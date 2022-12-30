@@ -1,6 +1,6 @@
-[![CNCF](https://img.shields.io/badge/CNCF-Sandbox-blue?logo=cncf)](https://www.cncf.io/projects/tinkerbell/)
-
 # Roadmap
+
+[![CNCF](https://img.shields.io/badge/CNCF-Sandbox-blue?logo=cncf)](https://www.cncf.io/projects/tinkerbell/)
 
 The official Tinkerbell roadmap that provides visibility into high level themes of work and features.
 
