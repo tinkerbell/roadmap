@@ -82,90 +82,112 @@ The new set of CRDs will be defined as part of a `v1alpha2` API.
 ```go
 // Hardware is a logical representation of a machine that can execute Workflows.
 type Hardware struct {
-	HardwareSpec
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	HardwareSpec `json:"spec,omitempty"`
 }
 
 type HardwareSpec struct {
 	// NetworkInterfaces defines the desired DHCP and netboot configuration for a network interface.
 	// It is necessary to specify at least one NetworkInterface.
-	NetworkInterfaces NetworkInterfaces
+	//+kubebuilder:validation:MinItems=1
+	NetworkInterfaces NetworkInterfaces `json:"networkInterfaces,omitempty"`
 
-	// IPXE provides iPXE script override fields.
-	// Optional.
-	IPXE IPXE
+	// IPXE provides iPXE script override fields. This is useful for debugging or netboot
+	// customization.
+	//+optional.
+	IPXE IPXE `json:"ipxe,omitempty"`
 
 	// OSIE describes the Operating System Installation Environment to be netbooted.
-	OSIE OSIE
+	OSIE OSIE `json:"osie,omitempty"`
 
 	// Instance describes instance specific data that is generally unused by Tinkerbell core.
-	Instance Instance
+	//+optional
+	Instance Instance `json:"instance,omitempty"`
 
 	// StorageDevices is a list of storage devices that will be available in the OSIE.
-	// Optional.
-	StorageDevices []StorageDevice
+	//+optional.
+	StorageDevices []StorageDevice `json:"storageDevices,omitempty"`
 
 	// BMCRef references a Rufio Machine object. It exists in the current API and will not be changed
 	// with this proposal.
-	BMCRef LocalObjectReference
+	//+optional.
+	BMCRef LocalObjectReference `json:"bmcRef,omitempty"`
 }
 
 // NetworkInterface is the desired configuration for a particular network interface.
 type NetworkInterface struct {
 	// DHCP is the basic network information for serving DHCP requests.
-	DHCP DHCP
+	DHCP DHCP `json:"dhcp,omitempty"`
 
 	// DisableDHCP disables DHCP for this interface. Implies DisableNetboot.
-	// Default false.
-	DisableDHCP bool
+	//+kubebuilder:default=false
+	DisableDHCP bool `json:"disableDhcp,omitempty"`
 
 	// DisableNetboot disables netbooting for this interface. The interface will still receive
 	// network information speified on by DHCP.
-	// Default false.
-	DisableNetboot bool
+	//+kubebuilder:default=false
+	DisableNetboot bool `json:"disableNetboot,omitempty"`
 }
 
 // DHCP describes basic network configuration to be served in DHCP offers.
 type DHCP struct {
-	IP      string
-	Netmask string
+	// IP is an IPv4 address.
+	//+kubebuilder:validation:Pattern="(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
+	IP      string `json:"ip,omitempty"`
 
-	// Optional.
-	Gateway string
+	// Netmask is an IPv4 netmask.
+	//+kubebuilder+validation:Pattern="^(255)\.(0|128|192|224|240|248|252|254|255)\.(0|128|192|224|240|248|252|254|255)\.(0|128|192|224|240|248|252|254|255)"
+	Netmask string `json:"netmask,omitempty"`
 
-	// Optional.
-	Hostname string
+	// Gateway is the default gateway.
+	//+kubebuilder:validation:Pattern=(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}
+	//+optional
+	Gateway string `json:"gateway,omitempty"`
 
-	// Optional.
-	VLANID int
+	//+kubebuilder:validation:Pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$"
+	//+optional
+	Hostname string `json:"hostname,omitempty"`
 
-	// Optional.
-	Nameservers []string
+	// VLANID is a VLAN ID between 0 and 4096.
+	//+kubebuilder:validation:Pattern="^(([0-9][0-9]{0,2}|[1-3][0-9][0-9][0-9]|40([0-8][0-9]|9[0-6]))(,[1-9][0-9]{0,2}|[1-3][0-9][0-9][0-9]|40([0-8][0-9]|9[0-6]))*)$"
+	//+optional
+	VLANID string `json:"vlanId,omitempty"`
 
-	// Optional.
-	Timeservers []string
+	//+optional
+	Nameservers []Nameserver `json:"nameservers,omitempty"`
 
-	// Defaults to max allowed DHCP lease time.
-	LeaseTime int32
+	//+optional
+	Timeservers []Timeserver `json:"timeservers,omitempty"`
+
+	// 24h default
+	//+kubebuilder:default=86400
+	//+kubebuilder:validation:Minimum=0
+	LeaseTime int32 `json:"leaseTime"`
 }
 
 // OSIE describes an OSIE to be used with a Hardware. The environment data
 // is dependent on the OSIE being used and should be updated with the OSIE reference object.
 type Netboot struct {
 	// OSIERef is a reference to an OSIE object.
-	OSIERef LocalObjectReference
+	OSIERef LocalObjectReference `json:"osieRef,omitempty"`
 
 	// KernelParams passed to the kernel when launching the OSIE. Parameters are joined with a
 	// space.
-	// Optional.
-	KernelParams []KernelParam
+	//+optional
+	KernelParams []string `json:"kernelParams,omitempty"`
 }
 
+// IPXE describes overrides for IPXE scripts. At least 1 of Inline or URL must be specified.
 type IPXE struct {
 	// Inline is an inline iPXE script that will be served as specified on this property.
-	Inline *string
+	//+optional
+	Inline *string `json:"inline,omitempty"`
 
 	// URL is a URL to an hosted iPXE script.
-	URL *string
+	//+optional
+	URL *string `json:"url,omitempty"`
 }
 
 // Instance describes instance specific data. Instance specific data is typically dependent on the
@@ -173,23 +195,33 @@ type IPXE struct {
 // service such as Tinkerbell's Hegel. The core Tinkerbell stack does not leverage this data.
 type Instance struct {
 	// Userdata is data with a structure understood by the producer and consumer of the data.
-	Userdata string
+	//+optional
+	Userdata string `json:"userdata,omitempty"`
 
 	// Vendordata is data with a structure understood by the producer and consumer of the data.
-	Vendordata string
+	//+optional
+	Vendordata string `json:"vendordata,omitempty"`
 }
 
 // NetworkInterfaces maps a MAC address to a NetworkInterface.
 type NetworkInterfaces map[MAC]NetworkInterface
 
 // MAC is a Media Access Control address.
+//+kubebuilder:validation:Pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"
 type MAC string
 
-// StorageDevice describes a storage device path that will be present in the OSIE.
-type StorageDevice string
+// Nameserver is an IP or hostname.
+//+kubebuilder:validation:Pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+type Nameserver string
 
-// KernelParam defines an atomic kernel parameter that will be passed to the OSIE.
-type KernelParam string
+// Timeserver is an IP or hostname.
+//+kubebuilder:validation:Pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+type Timeserver string
+
+// StorageDevice describes a storage device path that will be present in the OSIE.
+// StorageDevices must be valid linux paths.
+//+kubebuilder:validation:Pattern="^(/[^/ ]*)+/?$"
+type StorageDevice string
 ```
 
 #### `OSIE`
@@ -200,15 +232,18 @@ type KernelParam string
 // OSIE describes and Operating System Initialization Environment. It is used by Tinkerbell
 // to provision machines and should launch the Tink Worker component.
 type OSIE struct {
-	Spec OSIESpec
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec OSIESpec `json:"spec,omitempty"`
 }
 
 type OSIESpec struct {
 	// KernelURL is a URL to a kernel image.
-	KernelURL string
+	KernelURL string `json:"kernelUrl,omitempty"`
 
 	// InitrdURL is a URL to an initrd image.
-	InitrdURL string
+	InitrdURL string `json:"initrdUrl,omitempty"`
 }
 ```
 
@@ -219,53 +254,59 @@ type OSIESpec struct {
 // prior to execution where it is exposed to Hardware and user defined data. All fields within
 // TemplateSpec may contain template values. See https://pkg.go.dev/text/template for more details.
 type Template struct {
-	Spec TemplateSpec
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec TemplateSpec `json:"spec,omitempty"`
 }
 
 type TemplateSpec struct {
 	// Actions defines the set of actions to be run on a target machine. Actions are run sequentially
 	// in the order they are specified. At least 1 action must be specified. Names of actions
 	// must be unique within a Template.
-	Actions []Action
+	//kubebuilder:validation:MinItems=1
+	Actions []Action `json:"actions,omitempty"`
 
 	// Volumes to be mounted on all actions. If an action specifies the same volume it will take
 	// precedence.
-	// Optional.
-	Volumes []Volume
+	//+optional
+	Volumes []Volume `json:"volumes,omitempty"`
 
 	// Env defines environment variables to be available in all actions. If an action specifies
 	// the same environment variable it will take precedence.
-	// Optional.
-	Env map[string]string
+	//+optional
+	Env map[string]string `json:"env,omitempty"`
 }
 
 // Action defines an individual action to be run on a target machine.
 type Action struct {
 	// Name is a unique name for the action.
-	Name ActionName
+	Name string `json:"name,omitempty"`
 
 	// Image is an OCI image.
-	Image string
+	Image string `json:"image,omitempty"`
 
-	// Command defines the command to use when launching the image.
-	// Optional.
-	Command string
+	// Cmd defines the command to use when launching the image.
+	//+optional
+	Cmd string `json:"cmd,omitempty"`
 
 	// Args are a set of arguments to be passed to the container on launch.
-	Args []string
+	//+optional
+	Args []string `json:"args,omitempty"`
 
 	// Env defines environment variables used when launching the container.
-	// Optional.
-	Env map[string]string
+	//+optional
+	Env map[string]string `json:"env,omitempty"`
 
-		// Volumes defines the volumes to mount into the container.
-	// Optional.
-	Volumes []Volume
+	// Volumes defines the volumes to mount into the container.
+	//+optional
+	Volumes []Volume `json:"volumes,omitempty"`
 
 	// NetworkNamespace defines the network namespace to run the container in. This enables access 
 	// to the host network namespace.
 	// See https://man7.org/linux/man-pages/man7/namespaces.7.html.
-	NetworkNamespace string
+	//+optional
+	NetworkNamespace string `json:"networkNamespace,omitempty"`
 }
 
 // Volume is a specification for mounting a volume in an action. Volumes take the form
@@ -283,8 +324,6 @@ type Action struct {
 // See https://docs.docker.com/storage/volumes/ for additional details
 type Volume string
 
-// ActionName is unique name within the context of a workflow.
-type ActionName string
 ```
 
 #### `Workflow`
@@ -293,68 +332,72 @@ type ActionName string
 // Workflow describes a set of actions to be run on a specific Hardware. Workflows execute
 // once and should be considered ephemeral.
 type Workflow struct {
-	Spec   WorkflowSpec
-	Status WorkflowStatus
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   WorkflowSpec `json:"spec,omitempty"`
+	Status WorkflowStatus `json:"status,omitempty"`
 }
 
 type WorkflowSpec struct {
 	// HardwareRef is a reference to a Hardware resource this workflow will execute on.
 	// If no namespace is specified the Workflow's namespace is assumed.
-	HardwareRef LocalObjectReference
+	HardwareRef LocalObjectReference `json:"hardwareRef,omitempty"`
 
 	// TemplateRef is a reference to a Template resource used to render workflow actions.
 	// If no namespace is specified the Workflow's namespace is assumed.
-	TemplateRef LocalObjectReference
+	TemplateRef LocalObjectReference `json:"templateRef,omitempty"`
 
 	// TemplateData is user defined data that is injected during template rendering. The data
 	// structure should be marshalable.
-	// Optional.
-	TemplateData map[string]any
+	//+optional
+	TemplateData map[string]any `json:"templateData,omitempty"`
 
 	// Timeout defines the time the workflow has to complete. The timer begins when the first action
 	// is requested. When set to 0, no timeout is applied.
-	// Default 0.
-	Timeout int32
+	//+kubebuilder:default=0
+	//+kubebuilder:validation:Minimum=0
+	Timeout time.Duration `json:"timeout,omitempty"`
 }
 
 type WorkflowStatus struct {
 	// Actions is the list of rendered actions and their status.
-	Actions RenderedActions
+	Actions RenderedActions `json:"actions,omitempty"`
 
 	// StartedAt is the time the first action was requested. Nil indicates the workflow has not
 	// started.
-	StartedAt *metav1.Time
+	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
 	// State describes the current state of the workflow. This fields represents a summation of
 	// action states. Specifically, if all actions succeeded, the workflow will succeed. If one
 	// action fails, the workflow fails irrespective of previous action status'.
-	State State
+	State State `json:"state,omitempty"`
 
 	// Reason describes the reason for failure. It is only relevant when Result is ResultFailed.
 	// It is propogated from the failed action.
-	Reason Reason
+	Reason Reason `json:"reason,omitempty"`
 }
 
 // RenderedActions is a map of action name to RenderedAction.
-type RenderedActions map[ActionName]ActionStatus
+type RenderedActions map[string]ActionStatus
 
 // ActionStatus describes status information about an action.
 type ActionStatus struct {
 	// Rendered is the rendered action.
-	Rendered Action
+	Rendered Action `json:"rendered,omitempty"`
 
 	// StartedAt is the time the action was requested. Nil indicates the action has not started.
-	StartedAt *metav1.Time
+	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
 	// State describes the current state of the action.
-	State State
+	State State `json:"state,omitempty"`
 
 	// Reason describes the reason for failure. It is only relevant when Result is ResultFailed.
-	Reason Reason
+	Reason Reason `json:"reason,omitempty"`
 
 	// Message is a freeform user friendly message describing the specific issue that caused the
 	// failure. It is only relevant when Result is ResultFailed.
-	Message string
+	Message string `json:"message,omitempty"`
 }
 
 // State describes the point in time state of a workflow or action.
