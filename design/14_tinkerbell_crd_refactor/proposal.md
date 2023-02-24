@@ -20,6 +20,7 @@
   - [Migrating from v1alpha1 to v1alpha2](#migrating-from-v1alpha1-to-v1alpha2)
   - [Rationale](#rationale)
     - [Comparison with existing resources](#comparison-with-existing-resources)
+    - [Use of explicit `State`, `Reason` and `Message` fields vs conditions](#use-of-explicit-state-reason-and-message-fields-vs-conditions)
   - [Implementation Plan](#implementation-plan)
   - [Future Work](#future-work)
 
@@ -485,6 +486,12 @@ Tasks no longer feature on `WorkflowStatus` as they pertain to multi-worker work
 Reasons for failures have been introduced as a core concept, via the `Reason` field, around status reporting of actions. This enables programmatic failure reason identification and comparison. A future proposal will address how users can provide customized machine comparable reasons for failed actions.
 
 The `Workflow` provides a `TemplateData` field that can be used to inject arbitrary data into templates. This facilitates users wanting to model variable data on `Template`s that has per-`Workflow` values.
+
+### Use of explicit `State`, `Reason` and `Message` fields vs conditions
+
+Workflows operate as a state machine (detailed in [Workflow state transition](#workflow-state-transition)). [Conditions represent observations](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties) about a resource and are not state machines in and of themeselves. Conditions should generally be complimentary to existing resource information, not replace it. Conditions in the Kubernetes API have a [well defined set of fields](https://github.com/kubernetes/community/blob/4c9ef2d/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties). Some tools such as [Cluster API](https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20200506-conditions.md) break away by defining their own condition expectations.
+
+For these reasons, we think it would be more appropriate to have explicit fields to represent state and consider a separate conditions proposal that compliments the CRDs.
 
 ## Implementation Plan
 
