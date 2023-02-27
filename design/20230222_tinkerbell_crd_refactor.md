@@ -91,28 +91,28 @@ type Hardware struct {
 
 type HardwareSpec struct {
 	// NetworkInterfaces defines the desired DHCP and netboot configuration for a network interface.
-	//+kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MinItems=1
 	NetworkInterfaces NetworkInterfaces `json:"networkInterfaces,omitempty"`
 
 	// IPXE provides iPXE script override fields. This is useful for debugging or netboot
 	// customization.
-	//+optional.
+	// +optional.
 	IPXE IPXE `json:"ipxe,omitempty"`
 
 	// OSIE describes the Operating System Installation Environment to be netbooted.
 	OSIE OSIE `json:"osie,omitempty"`
 
 	// Instance describes instance specific data that is generally unused by Tinkerbell core.
-	//+optional
+	// +optional
 	Instance Instance `json:"instance,omitempty"`
 
 	// StorageDevices is a list of storage devices that will be available in the OSIE.
-	//+optional.
+	// +optional.
 	StorageDevices []StorageDevice `json:"storageDevices,omitempty"`
 
 	// BMCRef references a Rufio Machine object. It exists in the current API and will not be changed
 	// with this proposal.
-	//+optional.
+	// +optional.
 	BMCRef LocalObjectReference `json:"bmcRef,omitempty"`
 }
 
@@ -122,48 +122,48 @@ type NetworkInterface struct {
 	DHCP DHCP `json:"dhcp,omitempty"`
 
 	// DisableDHCP disables DHCP for this interface. Implies DisableNetboot.
-	//+kubebuilder:default=false
+	// +kubebuilder:default=false
 	DisableDHCP bool `json:"disableDhcp,omitempty"`
 
 	// DisableNetboot disables netbooting for this interface. The interface will still receive
 	// network information speified on by DHCP.
-	//+kubebuilder:default=false
+	// +kubebuilder:default=false
 	DisableNetboot bool `json:"disableNetboot,omitempty"`
 }
 
 // DHCP describes basic network configuration to be served in DHCP offers.
 type DHCP struct {
 	// IP is an IPv4 address.
-	//+kubebuilder:validation:Pattern="(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
+	// +kubebuilder:validation:Pattern="(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
 	IP      string `json:"ip,omitempty"`
 
 	// Netmask is an IPv4 netmask.
-	//+kubebuilder+validation:Pattern="^(255)\.(0|128|192|224|240|248|252|254|255)\.(0|128|192|224|240|248|252|254|255)\.(0|128|192|224|240|248|252|254|255)"
+	// +kubebuilder+validation:Pattern="^(255)\.(0|128|192|224|240|248|252|254|255)\.(0|128|192|224|240|248|252|254|255)\.(0|128|192|224|240|248|252|254|255)"
 	Netmask string `json:"netmask,omitempty"`
 
 	// Gateway is the default gateway address.
-	//+kubebuilder:validation:Pattern="(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
-	//+optional
+	// +kubebuilder:validation:Pattern="(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
+	// +optional
 	Gateway string `json:"gateway,omitempty"`
 
-	//+kubebuilder:validation:Pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9]"[A-Za-z0-9\-]*[A-Za-z0-9])$"
-	//+optional
+	// +kubebuilder:validation:Pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9]"[A-Za-z0-9\-]*[A-Za-z0-9])$"
+	// +optional
 	Hostname string `json:"hostname,omitempty"`
 
 	// VLANID is a VLAN ID between 0 and 4096.
-	//+kubebuilder:validation:Pattern="^(([0-9][0-9]{0,2}|[1-3][0-9][0-9][0-9]|40([0-8][0-9]|9[0-6]))(,[1-9][0-9]{0,2}|[1-3][0-9][0-9][0-9]|40([0-8][0-9]|9[0-6]))*)$"
-	//+optional
+	// +kubebuilder:validation:Pattern="^(([0-9][0-9]{0,2}|[1-3][0-9][0-9][0-9]|40([0-8][0-9]|9[0-6]))(,[1-9][0-9]{0,2}|[1-3][0-9][0-9][0-9]|40([0-8][0-9]|9[0-6]))*)$"
+	// +optional
 	VLANID string `json:"vlanId,omitempty"`
 
-	//+optional
+	// +optional
 	Nameservers []Nameserver `json:"nameservers,omitempty"`
 
-	//+optional
+	// +optional
 	Timeservers []Timeserver `json:"timeservers,omitempty"`
 
-	// 24h default
-	//+kubebuilder:default=86400
-	//+kubebuilder:validation:Minimum=0
+	// 24h default.
+	// +kubebuilder:default=86400
+	// +kubebuilder:validation:Minimum=0
 	LeaseTime int32 `json:"leaseTime"`
 }
 
@@ -175,18 +175,18 @@ type Netboot struct {
 
 	// KernelParams passed to the kernel when launching the OSIE. Parameters are joined with a
 	// space.
-	//+optional
+	// +optional
 	KernelParams []string `json:"kernelParams,omitempty"`
 }
 
 // IPXE describes overrides for IPXE scripts. At least 1 option must be specified.
 type IPXE struct {
 	// Content is an inline iPXE script.
-	//+optional
+	// +optional
 	Content *string `json:"inline,omitempty"`
 
 	// URL is a URL to a hosted iPXE script.
-	//+optional
+	// +optional
 	URL *string `json:"url,omitempty"`
 }
 
@@ -195,11 +195,11 @@ type IPXE struct {
 // service such as Tinkerbell's Hegel. The core Tinkerbell stack does not leverage this data.
 type Instance struct {
 	// Userdata is data with a structure understood by the producer and consumer of the data.
-	//+optional
+	// +optional
 	Userdata string `json:"userdata,omitempty"`
 
 	// Vendordata is data with a structure understood by the producer and consumer of the data.
-	//+optional
+	// +optional
 	Vendordata string `json:"vendordata,omitempty"`
 }
 
@@ -207,20 +207,20 @@ type Instance struct {
 type NetworkInterfaces map[MAC]NetworkInterface
 
 // MAC is a Media Access Control address.
-//+kubebuilder:validation:Pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"
+// +kubebuilder:validation:Pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"
 type MAC string
 
 // Nameserver is an IP or hostname.
-//+kubebuilder:validation:Pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+// +kubebuilder:validation:Pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
 type Nameserver string
 
 // Timeserver is an IP or hostname.
-//+kubebuilder:validation:Pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+// +kubebuilder:validation:Pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
 type Timeserver string
 
 // StorageDevice describes a storage device path that will be present in the OSIE.
 // StorageDevices must be valid linux paths.
-//+kubebuilder:validation:Pattern="^(/[^/ ]*)+/?$"
+// +kubebuilder:validation:Pattern="^(/[^/ ]*)+/?$"
 type StorageDevice string
 ```
 
@@ -251,8 +251,9 @@ type OSIESpec struct {
 
 ```go
 // Template defines a set of actions to be run on a target machine. The template is rendered
-// prior to execution where it is exposed to Hardware and user defined data. All fields within
-// TemplateSpec may contain template values. See https://pkg.go.dev/text/template for more details.
+// prior to execution where it is exposed to Hardware and user defined data. Most fields within the
+// TemplateSpec may contain templates values excluding .TemplateSpec.Actions[].Name.
+// See https://pkg.go.dev/text/template for more details.
 type Template struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -264,34 +265,34 @@ type TemplateSpec struct {
 	// Actions defines the set of actions to be run on a target machine. Actions are run sequentially
 	// in the order they are specified. At least 1 action must be specified. Names of actions
 	// must be unique within a Template.
-	//kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MinItems=1
 	Actions []Action `json:"actions,omitempty"`
 
 	// Volumes to be mounted on all actions. If an action specifies the same volume it will take
 	// precedence.
-	//+optional
+	// +optional
 	Volumes []Volume `json:"volumes,omitempty"`
 
 	// Env defines environment variables to be available in all actions. If an action specifies
 	// the same environment variable it will take precedence.
-	//+optional
+	// +optional
 	Env map[string]string `json:"env,omitempty"`
 }
 
 // Action defines an individual action to be run on a target machine.
 type Action struct {
-	// Name is a unique name for the action.
+	// Name is a unique name for the action. It cannot be a templated value.
 	Name string `json:"name,omitempty"`
 
 	// Image is an OCI image.
 	Image string `json:"image,omitempty"`
 
 	// Cmd defines the command to use when launching the image.
-	//+optional
+	// +optional
 	Cmd string `json:"cmd,omitempty"`
 
 	// Args are a set of arguments to be passed to the container on launch.
-	//+optional
+	// +optional
 	Args []string `json:"args,omitempty"`
 
 	// Env defines environment variables used when launching the container.
@@ -299,13 +300,13 @@ type Action struct {
 	Env map[string]string `json:"env,omitempty"`
 
 	// Volumes defines the volumes to mount into the container.
-	//+optional
+	// +optional
 	Volumes []Volume `json:"volumes,omitempty"`
 
 	// NetworkNamespace defines the network namespace to run the container in. This enables access 
 	// to the host network namespace.
 	// See https://man7.org/linux/man-pages/man7/namespaces.7.html.
-	//+optional
+	// +optional
 	NetworkNamespace string `json:"networkNamespace,omitempty"`
 }
 
@@ -350,21 +351,21 @@ type WorkflowSpec struct {
 
 	// TemplateData is user defined data that is injected during template rendering. The data
 	// structure should be marshalable.
-	//+optional
+	// +optional
 	TemplateData map[string]any `json:"templateData,omitempty"`
 
 	// Timeout defines the time the workflow has to complete. The timer begins when the first action
 	// is requested. When set to 0, no timeout is applied.
-	//+kubebuilder:default=0
-	//+kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=0
+	// +kubebuilder:validation:Minimum=0
 	Timeout time.Duration `json:"timeout,omitempty"`
 }
 
 type WorkflowStatus struct {
-	// Actions is the map of rendered actions and their status'.
-	Actions map[string]ActionStatus `json:"actions,omitempty"`
+	// Actions is a list of action states.
+	Actions []ActionStatus `json:"actions,omitempty"`
 
-	// StartedAt is the time the first action was requested. Nil indicates the workflow has not
+	// StartedAt is the time the first action was requested. Nil indicates the Workflow has not
 	// started.
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
@@ -388,7 +389,7 @@ type ActionStatus struct {
 	// Rendered is the rendered action.
 	Rendered Action `json:"rendered,omitempty"`
 
-	// StartedAt is the time the action was requested. Nil indicates the action has not started.
+	// StartedAt is the time the action was requested. Nil indicates the Action has not started.
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
 	// State describes the current state of the action.
@@ -427,11 +428,11 @@ const (
 
 ### Workflow state machine
 
-![Workflow state machine](https://raw.githubusercontent.com/tinkerbell/roadmap/latest/design/14_tinkerbell_crd_refactor/workflow_state_machine.png)
+![Workflow state machine](https://raw.githubusercontent.com/chrisdoherty4/tinkerbell-roadmap/feat/crd-refactor/design/images/tinkerbell_crd_refactor/workflow_state_machine.png)
 
 ### Action state machine
 
-![Action state machine](https://raw.githubusercontent.com/tinkerbell/roadmap/latest/design/14_tinkerbell_crd_refactor/workflow_state_machine.png)
+![Action state machine](https://raw.githubusercontent.com/chrisdoherty4/tinkerbell-roadmap/feat/crd-refactor/design/images/tinkerbell_crd_refactor/action_state_machine.png)
 
 ### Resource validation
 
@@ -439,25 +440,18 @@ Each CRD will leverage [CEL](https://kubernetes.io/blog/2022/09/23/crd-validatio
 
 ### Data and functions available during template rendering
 
-Templates will have access to a subset of `Hardware` data when they are rendered. Injecting `Hardware` data was outlined in a [previous proposal](https://github.com/tinkerbell/proposals/tree/e24b19a628c6b1ecaafd566667155ca5d6fd6f70/proposals/0028). The existing implementation only injects disk that will, based on this proposal, be sourced from the `.Hardware.StorageDevices` list.
+Templates will have access to a subset of `Hardware` data when they are rendered. Injecting `Hardware` data was outlined in a [previous proposal](https://github.com/tinkerbell/proposals/tree/e24b19a628c6b1ecaafd566667155ca5d6fd6f70/proposals/0028). The existing implementation only injects disk that will, based on this proposal, be sourced from the `.Hardware.StorageDevices` list. This will continue to be available for new templates.
 
-The previous proposal did not outline a set of custom functions injected into templates. The custom functions are detailed in [`template_funcs.go`](https://github.com/tinkerbell/tink/blob/main/internal/workflow/template_funcs.go) and include:
+All existing, custom template functions detailed in [`template_funcs.go`](https://github.com/tinkerbell/tink/blob/main/internal/workflow/template_funcs.go) will continue to be available during template rendering.
 
-* `contains`: determine if a string contains a substring.
-* `hasPrefix`: determine if a string has a prefix.
-* `hasSuffix`: determine if a string has a suffix.
-* `formatPartition`: formats a string representing a device path with a specific partition. For example, `{{ formatPartition "/dev/sda" 1 }}` will result in `/dev/sda1`.
-
-These functions will continue to be available during template rendering.
-
-### Hegel Changes
+### Hegel API Changes
 
 Hegel will undergo a reduction in the endpoints it serves because the data is no longer available on the `Hardware` resource. Minimally, Hegel will serve the following endpoints:
 
 * `/2009-04-04/meta-data/instance-id`
 * `/2009-04-04/user-data`
 
-This ensures compatability with the cloud-init that explores the API via the `instance-id` endpoint.
+This ensures compatability with cloud-init that explores the API via the instance ID endpoint.
 
 ## Migrating from v1alpha1 to v1alpha2
 
@@ -501,20 +495,24 @@ Workflows operate as a state machine (detailed in [Workflow state transition](#w
 
 For these reasons, we think it would be more appropriate to have explicit fields to represent state and consider a separate conditions proposal that compliments the CRDs.
 
+### `ActionState` and `WorkflowState`
+
+Having 2 separate types helps decouple the Action and Workflow state machines. This ensures adding or removing states from Actions or Workflows will not impact the other.
+
 ## Implementation Plan
 
 1. All services that have unreleased changes will be released under a new version. This provides a baseline of functional services that can be used in the Tinkerbell Helm charts.
 
 2. Develop the code to leverage the `v1alpha2` API.
 
-3. Hard cut over to the new API version. This means versions beyond those specified during (1) will no longer support the `v1alpha1` API.
+3. Hard cut over to the new API version. This means service versions beyond those specified during (1) will no longer support the `v1alpha1` API and consumers will be forced to convert their resources.
 
 ## Future Work
 
-Introducing mechanisms to propagate reasons and user readable messages for action failure. As these mechanisms do not exist currently and will not be realized through this proposal, the `.Workflow.Status.Reason` and `.Workflow.Status.Message` will have minimal benefit to the end user. The separate proposal will address the contract between actions and Tink Worker that can be used to propogate a reason and message to workflows.
+Introducing mechanisms to propagate `Reason` and `Message` values for action failure. As these mechanisms do not exist currently and will not be realized through this proposal, the `.Workflow.Status.Reason` and `.Workflow.Status.Message` will have minimal benefit to the end user. The separate proposal will address the contract between actions and Tink Worker that can be used to propogate a reason and message to workflows.
 
 Maintainers have informally discussed inverting the relationship between `Hardware` and Rufio CRDs. This is necessary for defining a precedent on how to extend Tinkerbell functionality without expanding the scope of core Tinkerbell CRDs.
 
 Introduction of user defined metadata to be served by Hegel that could facilitate user defined actions. Similarly, injection of additional `Hardware` data when templates are rendered will be addressed on a separate ad-hoc basis.
 
-Separation of `Hardware.Instance` data into a separate CRD possibly owned by Hegel. Given the instance data is unused by the core Tinkerbell stack it 
+Separation of `Hardware.Instance` data into a separate CRD possibly owned by Hegel. Given the instance data is unused by the core Tinkerbell stack we anticipate, in conjunction with adjusting the relationship between Rufio and Tink CRDs, that instance metadata will be deprecated on this API and transitioned to a separate CRD.
