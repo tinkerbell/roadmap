@@ -76,7 +76,7 @@ Users resort to Q&A in the Tinkerbell Slack to determine what fields are require
 
 ### Custom Resource Definitions
 
-The new set of CRDs will be defined as part of a `v1alpha2` API.
+The CRDs will be developed under a `v1alpha2` API version.
 
 #### `Hardware`
 
@@ -91,7 +91,6 @@ type Hardware struct {
 
 type HardwareSpec struct {
 	// NetworkInterfaces defines the desired DHCP and netboot configuration for a network interface.
-	// It is necessary to specify at least one NetworkInterface.
 	//+kubebuilder:validation:MinItems=1
 	NetworkInterfaces NetworkInterfaces `json:"networkInterfaces,omitempty"`
 
@@ -142,12 +141,12 @@ type DHCP struct {
 	//+kubebuilder+validation:Pattern="^(255)\.(0|128|192|224|240|248|252|254|255)\.(0|128|192|224|240|248|252|254|255)\.(0|128|192|224|240|248|252|254|255)"
 	Netmask string `json:"netmask,omitempty"`
 
-	// Gateway is the default gateway.
-	//+kubebuilder:validation:Pattern=(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}
+	// Gateway is the default gateway address.
+	//+kubebuilder:validation:Pattern="(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
 	//+optional
 	Gateway string `json:"gateway,omitempty"`
 
-	//+kubebuilder:validation:Pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$"
+	//+kubebuilder:validation:Pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9]"[A-Za-z0-9\-]*[A-Za-z0-9])$"
 	//+optional
 	Hostname string `json:"hostname,omitempty"`
 
@@ -180,13 +179,13 @@ type Netboot struct {
 	KernelParams []string `json:"kernelParams,omitempty"`
 }
 
-// IPXE describes overrides for IPXE scripts. At least 1 of Inline or URL must be specified.
+// IPXE describes overrides for IPXE scripts. At least 1 option must be specified.
 type IPXE struct {
-	// Inline is an inline iPXE script that will be served as specified on this property.
+	// Content is an inline iPXE script.
 	//+optional
-	Inline *string `json:"inline,omitempty"`
+	Content *string `json:"inline,omitempty"`
 
-	// URL is a URL to an hosted iPXE script.
+	// URL is a URL to a hosted iPXE script.
 	//+optional
 	URL *string `json:"url,omitempty"`
 }
@@ -227,10 +226,10 @@ type StorageDevice string
 
 #### `OSIE`
 
-`OSIE` is a new CRD. It exists to ensure OSIE URLs can be re-used and easily updated across `Hardware` instances.
+`OSIE` is a new CRD. It enables re-use of OSIE URLs across `Hardware` instances.
 
 ```go
-// OSIE describes and Operating System Initialization Environment. It is used by Tinkerbell
+// OSIE describes an Operating System Installation Environment. It is used by Tinkerbell
 // to provision machines and should launch the Tink Worker component.
 type OSIE struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -362,25 +361,27 @@ type WorkflowSpec struct {
 }
 
 type WorkflowStatus struct {
-	// Actions is the list of rendered actions and their status.
-	Actions RenderedActions `json:"actions,omitempty"`
+	// Actions is the map of rendered actions and their status'.
+	Actions map[string]ActionStatus `json:"actions,omitempty"`
 
 	// StartedAt is the time the first action was requested. Nil indicates the workflow has not
 	// started.
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
-	// State describes the current state of the workflow. This fields represents a summation of
-	// action states. Specifically, if all actions succeeded, the workflow will succeed. If one
-	// action fails, the workflow fails irrespective of previous action status'.
-	State State `json:"state,omitempty"`
+	// State describes the current state of the workflow. For the workflow to enter the 
+	// WorkflowStateSucceeded state all actions must be in ActionStateSucceeded. The Workflow will
+	// enter a WorkflowStateFailed if 1 or more Actions fails.
+	State WorkflowState `json:"state,omitempty"`
 
-	// Reason describes the reason for failure. It is only relevant when Result is ResultFailed.
-	// It is propogated from the failed action.
-	Reason Reason `json:"reason,omitempty"`
+	// Reason is a short CamelCase word or phrase describing why the Workflow entered
+	// WorkflowStateFailed. It is not relevant when the State field is not WorkflowStateFailed.
+	Reason string `json:"reason,omitempty"`
+
+	// Message is a free-form user friendly message describing why the Workflow entered the
+	// WorkflowStateFailed state. Typically, this is an elaboration on the Reason. It is not
+	// relevant when the State field is not WorkflowStateFailed.
+	Message string `json:"message,omitempty"`
 }
-
-// RenderedActions is a map of action name to RenderedAction.
-type RenderedActions map[string]ActionStatus
 
 // ActionStatus describes status information about an action.
 type ActionStatus struct {
@@ -391,49 +392,54 @@ type ActionStatus struct {
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
 	// State describes the current state of the action.
-	State State `json:"state,omitempty"`
+	State ActionState `json:"state,omitempty"`
 
-	// Reason describes the reason for failure. It is only relevant when Result is ResultFailed.
-	Reason Reason `json:"reason,omitempty"`
+	// Reason is a short CamelCase word or phrase describing why the Action entered
+	// ActionStateFailed. It is not relevant when the State field is not ActionStateFailed. 
+	Reason string `json:"reason,omitempty"`
 
-	// Message is a freeform user friendly message describing the specific issue that caused the
-	// failure. It is only relevant when Result is ResultFailed.
+	// Message is a free-form user friendly message describing why the Action entered the
+	// ActionStateFailed state. Typically, this is an elaboration on the Reason. It is not
+	// relevant when the State field is not ActionStateFailed.
 	Message string `json:"message,omitempty"`
 }
 
-// State describes the point in time state of a workflow or action.
-type State string
+// State describes the point in time state of a Workflow.
+type WorkflowState string
 
 const (
-	StatePending   State = "Pending"
-	StateRunning   State = "Running"
-	StateSucceeded State = "Succeeded"
-	StateFailed    State = "Failed"
+	WorkflowStatePending   WorkflowState = "Pending"
+	WorkflowStateRunning   WorkflowState = "Running"
+	WorkflowStateSucceeded WorkflowState = "Succeeded"
+	WorkflowStateFailed    WorkflowState = "Failed"
 )
 
-// Reason is a one-word TitleCase string indicating why a failure occurred. It is not restricted
-// to the values defined with this API.
-type Reason string
+// ActionState describes a point in time state of an Action.
+type ActionState string
 
 const (
-	ReasonUnknown Reason = "Unknown"
-	ReasonTimeout Reason = "Timeout"
+	ActionStatePending      ActionState = "Pending"
+	ActionStateRunning      ActionState = "Running"
+	ActionStateSucceeded    ActionState = "Succeeded"
+	ActionStateFailed       ActionState = "Failed"
 )
 ```
 
-### Workflow state transition
+### Workflow state machine
 
-![Workflow state transitions](https://raw.githubusercontent.com/tinkerbell/roadmap/b7b2362997c01ffa52758e10259b8f55e81f7447/design/14_tinkerbell_crd_refactor/workflow_state_machine.png)
+![Workflow state machine](https://raw.githubusercontent.com/tinkerbell/roadmap/latest/design/14_tinkerbell_crd_refactor/workflow_state_machine.png)
 
-Actions follow a similar state transition model.
+### Action state machine
 
-### Webhooks
+![Action state machine](https://raw.githubusercontent.com/tinkerbell/roadmap/latest/design/14_tinkerbell_crd_refactor/workflow_state_machine.png)
 
-We will introduce a set of basic webhooks for validating each CRD. The webhooks will only validate the `v1alpha2` API version. They will be implemented as part of the `tink-controller` component.
+### Resource validation
+
+Each CRD will leverage [CEL](https://kubernetes.io/blog/2022/09/23/crd-validation-rules-beta/) for all validations supported by CEL. For validations such as ensuring MAC address uniqueness on `Hardware` resources a webhook will be used. The webhook will be served from the `tink-controller` component.
 
 ### Data and functions available during template rendering
 
-Templates will have access to a subset of `Hardware` data when they are rendered. Injecting `Hardware` data was outlined in a [previous proposal](https://github.com/tinkerbell/proposals/tree/e24b19a628c6b1ecaafd566667155ca5d6fd6f70/proposals/0028). The existing implementation only injects disk that will, based on this proposal, be sources from the `.Hardware.StorageDevices` list.
+Templates will have access to a subset of `Hardware` data when they are rendered. Injecting `Hardware` data was outlined in a [previous proposal](https://github.com/tinkerbell/proposals/tree/e24b19a628c6b1ecaafd566667155ca5d6fd6f70/proposals/0028). The existing implementation only injects disk that will, based on this proposal, be sourced from the `.Hardware.StorageDevices` list.
 
 The previous proposal did not outline a set of custom functions injected into templates. The custom functions are detailed in [`template_funcs.go`](https://github.com/tinkerbell/tink/blob/main/internal/workflow/template_funcs.go) and include:
 
@@ -446,10 +452,12 @@ These functions will continue to be available during template rendering.
 
 ### Hegel Changes
 
-Hegel will undergo a reduction in the endpoints it serves because the data is no longer available in the `Hardware` resource. Minimally, Hegel will serve the following endpoints:
+Hegel will undergo a reduction in the endpoints it serves because the data is no longer available on the `Hardware` resource. Minimally, Hegel will serve the following endpoints:
 
 * `/2009-04-04/meta-data/instance-id`
 * `/2009-04-04/user-data`
+
+This ensures compatability with the cloud-init that explores the API via the `instance-id` endpoint.
 
 ## Migrating from v1alpha1 to v1alpha2
 
