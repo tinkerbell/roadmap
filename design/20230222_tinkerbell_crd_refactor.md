@@ -133,17 +133,18 @@ type NetworkInterface struct {
 	DisableNetboot bool `json:"disableNetboot,omitempty"`
 }
 
-// DHCP describes basic network configuration to be served in DHCP offers.
+// DHCP describes basic network configuration to be served in DHCP OFFER responses. It can be
+// considered a DHCP reservation.
 type DHCP struct {
-	// IP is an IPv4 address.
+	// IP is an IPv4 address to serve.
 	// +kubebuilder:validation:Pattern="(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
 	IP      string `json:"ip,omitempty"`
 
-	// Netmask is an IPv4 netmask.
+	// Netmask is an IPv4 netmask to serve.
 	// +kubebuilder+validation:Pattern="^(255)\.(0|128|192|224|240|248|252|254|255)\.(0|128|192|224|240|248|252|254|255)\.(0|128|192|224|240|248|252|254|255)"
 	Netmask string `json:"netmask,omitempty"`
 
-	// Gateway is the default gateway address.
+	// Gateway is the default gateway address to serve.
 	// +kubebuilder:validation:Pattern="(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
 	// +optional
 	Gateway string `json:"gateway,omitempty"`
@@ -157,12 +158,15 @@ type DHCP struct {
 	// +optional
 	VLANID string `json:"vlanId,omitempty"`
 
+	// Nameservers to serve.
 	// +optional
 	Nameservers []Nameserver `json:"nameservers,omitempty"`
 
+	// Timeservers to serve.
 	// +optional
 	Timeservers []Timeserver `json:"timeservers,omitempty"`
 
+	// LeaseTime to serve.
 	// 24h default.
 	// +kubebuilder:default=86400
 	// +kubebuilder:validation:Minimum=0
@@ -376,14 +380,8 @@ type WorkflowStatus struct {
 	// enter a WorkflowStateFailed if 1 or more Actions fails.
 	State WorkflowState `json:"state,omitempty"`
 
-	// Reason is a short CamelCase word or phrase describing why the Workflow entered
-	// WorkflowStateFailed. It is not relevant when the State field is not WorkflowStateFailed.
-	Reason string `json:"reason,omitempty"`
-
-	// Message is a free-form user friendly message describing why the Workflow entered the
-	// WorkflowStateFailed state. Typically, this is an elaboration on the Reason. It is not
-	// relevant when the State field is not WorkflowStateFailed.
-	Message string `json:"message,omitempty"`
+	// Conditions details a set of observations about the Workflow.
+	Conditions Conditions
 }
 
 // ActionStatus describes status information about an action.
@@ -392,7 +390,7 @@ type ActionStatus struct {
 	Rendered Action `json:"rendered,omitempty"`
 
 	// StartedAt is the time the action was requested. Nil indicates the Action has not started.
-	StartedAt *metav1.Time `json:"startedAt,omitempty"`
+	StartedAt metav1.Time `json:"startedAt,omitempty"`
 
 	// State describes the current state of the action.
 	State ActionState `json:"state,omitempty"`
@@ -411,9 +409,17 @@ type ActionStatus struct {
 type WorkflowState string
 
 const (
+	// WorkflowStatePending indicates the workflow is in a pending state.
 	WorkflowStatePending   WorkflowState = "Pending"
+
+	// WorkflowStateRunning indicates the first Action has been requested and the Workflow is in
+	// progress.
 	WorkflowStateRunning   WorkflowState = "Running"
+
+	// WorkflowStateSucceeded indicates all Workflow actions have successfully completed.
 	WorkflowStateSucceeded WorkflowState = "Succeeded"
+
+	// WorkflowStateFailed indicates an Action entered a failure state.
 	WorkflowStateFailed    WorkflowState = "Failed"
 )
 
@@ -421,11 +427,94 @@ const (
 type ActionState string
 
 const (
+	// ActionStatePending indicates an Action is awaiting execution.
 	ActionStatePending      ActionState = "Pending"
+
+	// ActionStateRunning indicates an Action has begun execution.
 	ActionStateRunning      ActionState = "Running"
+
+	// ActionStateSucceeded indicates an Action completed execution successfully.
 	ActionStateSucceeded    ActionState = "Succeeded"
+
+	// ActionStatFailed indicates an Action failed to execute. Users may inspect the associated
+	// Workflow resource to gain deeper insights into why the action failed.
 	ActionStateFailed       ActionState = "Failed"
 )
+```
+
+A `Started` condition will be used to indicate the workflow has started and is observed based on the presence of `Workflow.WorkflowStatus.StartedAt`. It's severity will be `ConditionSeverityInfo` and its default Status will be `ConditionStatusFalse`.
+
+A `Succeeded` condition will be used to indicate the workflow succeeded indicated by a status of `ConditionStatusTrue`. When an action fails, `Succeeded` will become `ConditionStatusFalse` with severity `ConditionSeverityError` and the `Reason` and `Message` will be propagated from the failed `ActionStatus`.
+
+#### Conditions
+
+The conditions data structure will only be available on the `Workflow` CRD but is designed to be applicable to other resources. It provides the foundational components for extensible observations about any resource that it resides on.
+
+```go
+// ConditionType 
+type ConditionType string
+
+// ConditionSeverity expresses the severity of a Condition Type failing.
+type ConditionSeverity string
+
+const (
+  // ConditionSeverityError indicates the condition should be treated as an error.
+  ConditionSeverityError ConditionSeverity = "Error"
+
+  // ConditionSeverityWarning indicates the condition shouldbe investigated but the system may
+  // continue to work.
+  ConditionSeverityWarning ConditionSeverity = "Warning"
+
+  // ConditionSeverityInfo indicates the condition is informational only.
+  ConditionSeverityInfo ConditionSeverity = "Info"
+
+  // ConditionSeverityNone indicates the condition has no severity.
+  ConditionSeverityNone ConditionSeverity = ""
+)
+
+// ConditionStatus expresses the current state of the condition.
+type ConditionStatus string
+
+const (
+	// ConditionStatusUnknown is the default status and indicates the condition cannot be
+	// evaluated to either ConditionStatusTrue or ConditionStatusFalse.
+	ConditionStatusUnknown ConditionStatus = "Unknown"
+
+	// ConditionStatusTrue indicates the condition has been evaluated as true.
+	ConditionStatusTrue ConditionStatus = "True"
+
+	// ConditionStatusFalse indiciates the condition has been evaluated as false.
+	ConditionStatusFalse ConditionStatus = "False"
+)
+
+// Condition defines an observation on a resource that is generally attainable by inspecting 
+// other status fields.
+type Condition struct {
+   // Type of condition.
+   Type ConditionType `json:"type"`
+
+   // Status of the condition.
+   Status ConditionStatus `json:"status"`
+
+   // Severity with which to treat failures of this type of condition.
+   // +kubebuilder:default="Error"
+   // +optional
+   Severity ConditionSeverity `json:"severity,omitempty"`
+
+   // LastTransitionTime is the last time the condition transitioned from one status to another.
+   LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+
+   // Reason for the conditions last transition.
+   // +optional
+   Reason string `json:"reason,omitempty"`
+
+   // Message is a human readable message indicating details about the last transition.
+   // +optional
+   Message string `json:"message,omitempty"`
+}
+
+// Conditions define a list of observations of a particular resource.
+type Conditions []Condition
 ```
 
 ### Workflow state machine
@@ -457,7 +546,9 @@ This ensures compatability with cloud-init that explores the API via the instanc
 
 ## Migrating from v1alpha1 to v1alpha2
 
-Given the relative immaturity of the Tinkerbell API we will not provide any migration tooling from `v1alpha1` to `v1alpha2`. Users will be required to manually convert `Hardware` and `Template` resources. `Workflow` resources are considered ephemeral and can generally be deleted.
+We will provide a basic utility for converting v1alpha1 `Hardware` and `Template` resources to the v1alpha2 version. For fields that cannot be represented in the v1alpha2 API the data will be dropped.
+
+`Workflow`s are considered ephemeral and should be recreated by the end user.
 
 ## Rationale
 
@@ -491,16 +582,6 @@ Reasons for failures have been introduced as a core concept, via the `Reason` fi
 
 The `Workflow` provides a `TemplateData` field that can be used to inject arbitrary data into templates. This facilitates users wanting to model variable data on `Template`s that has per-`Workflow` values.
 
-### Use of explicit `State`, `Reason` and `Message` fields vs conditions
-
-Workflows operate as a state machine (detailed in [Workflow state transition](#workflow-state-transition)). [Conditions represent observations](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties) about a resource and are not state machines in and of themeselves. Conditions should generally be complimentary to existing resource information, not replace it. Conditions in the Kubernetes API have a [well defined set of fields](https://github.com/kubernetes/community/blob/4c9ef2d/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties). Some tools such as [Cluster API](https://github.com/kubernetes-sigs/cluster-api/blob/main/docs/proposals/20200506-conditions.md) break away by defining their own condition expectations.
-
-For these reasons, we think it would be more appropriate to have explicit fields to represent state and consider a separate conditions proposal that compliments the CRDs.
-
-### `ActionState` and `WorkflowState`
-
-Having 2 separate types helps decouple the Action and Workflow state machines. This ensures adding or removing states from Actions or Workflows will not impact the other.
-
 ## Implementation Plan
 
 1. All services that have unreleased changes will be released under a new version. This provides a baseline of functional services that can be used in the Tinkerbell Helm charts.
@@ -511,10 +592,6 @@ Having 2 separate types helps decouple the Action and Workflow state machines. T
 
 ## Future Work
 
-Introducing mechanisms to propagate `Reason` and `Message` values for action failure. As these mechanisms do not exist currently and will not be realized through this proposal, the `.Workflow.Status.Reason` and `.Workflow.Status.Message` will have minimal benefit to the end user. The separate proposal will address the contract between actions and Tink Worker that can be used to propogate a reason and message to workflows.
+Introducing mechanisms to propagate `Reason` and `Message` values for action failure. As these mechanisms do not exist currently and will not be realized through this proposal, the `.ActionStatus.Reason` and `.ActionStatus.Message` will have minimal benefit to the end user. A separate proposal will address the contract between actions and Tink Worker that can be used to propogate a reason and message to workflows.
 
-Maintainers have informally discussed inverting the relationship between `Hardware` and Rufio CRDs. This is necessary for defining a precedent on how to extend Tinkerbell functionality without expanding the scope of core Tinkerbell CRDs.
-
-Introduction of user defined metadata to be served by Hegel that could facilitate user defined actions. Similarly, injection of additional `Hardware` data when templates are rendered will be addressed on a separate ad-hoc basis.
-
-Separation of `Hardware.Instance` data into a separate CRD possibly owned by Hegel. Given the instance data is unused by the core Tinkerbell stack we anticipate, in conjunction with adjusting the relationship between Rufio and Tink CRDs, that instance metadata will be deprecated on this API and transitioned to a separate CRD.
+Separation of `Hardware.Instance` data into a separate CRD. Given the instance data is unused by the core Tinkerbell stack we anticipate, in conjunction with adjusting the relationship between Rufio and Tink CRDs, that instance metadata will be deprecated and transitioned to a separate CRD.

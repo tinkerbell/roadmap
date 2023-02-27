@@ -7,8 +7,4 @@ ActionStateRunning --> ActionStateFailed
 ActionStateSucceeded --> [*]
 ActionStateFailed --> [*]
 
-ActionStatePending : Action waiting to start
-ActionStateSucceeded : All actions completed\nsuccessfully
-ActionStateFailed : An action failed
-
 @enduml
