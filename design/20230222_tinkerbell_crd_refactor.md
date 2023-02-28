@@ -339,16 +339,6 @@ type Volume string
 #### `Workflow`
 
 ```go
-// Workflow describes a set of actions to be run on a specific Hardware. Workflows execute
-// once and should be considered ephemeral.
-type Workflow struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   WorkflowSpec `json:"spec,omitempty"`
-	Status WorkflowStatus `json:"status,omitempty"`
-}
-
 type WorkflowSpec struct {
 	// HardwareRef is a reference to a Hardware resource this workflow will execute on.
 	// If no namespace is specified the Workflow's namespace is assumed.
@@ -448,11 +438,39 @@ const (
 	// Workflow resource to gain deeper insights into why the action failed.
 	ActionStateFailed ActionState = "Failed"
 )
+
+// +kubebuilder:subresource:status
+
+// Workflow describes a set of actions to be run on a specific Hardware. Workflows execute
+// once and should be considered ephemeral.
+type Workflow struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   WorkflowSpec `json:"spec,omitempty"`
+	Status WorkflowStatus `json:"status,omitempty"`
+}
+
+type WorkflowList struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Items []Workflow `json:"items,omitempty"`
+}
 ```
 
-A `Started` condition will be used to indicate the workflow has started and is observed based on the presence of `Workflow.WorkflowStatus.StartedAt`. It's severity will be `ConditionSeverityInfo` and its default status will be `ConditionStatusFalse`.
+##### Workflow `Started` condition
 
-A `Succeeded` condition will be used to indicate the workflow succeeded. It will default to `ConditionStatusUnknown`. It will become `ConditionStatusTrue` with `ConditionSeverityInfo` when `WorkflowStatus.State == WorkflowStateSucceeded`. When an action fails, it will become `ConditionStatusFalse` with severity `ConditionSeverityError`. Its `Reason` and `Message` will be propagated from the failed `ActionStatus.FailureReason` and `ActionStatus.FailureMessage`.
+A `Started` condition will be used to indicate the workflow has started. Its default status will be `ConditionStatusFalse`. 
+
+When `Workflow.WorkflowStatus.StartedAt` is a non-nil value it transitions to `True`.
+
+##### Workflow `Succeeded` condition
+
+A `Succeeded` condition will be used to indicate the workflow succeeded.
+
+When `WorkflowStatus.State` transitions to `WorkflowStateSucceeded`, it will transition to a status and severity of `ConditionStatusTrue` and `ConditionSeverityInfo`. 
+
+When `WorkflowStatus.State` transitions to `WorkflowStateFailed`, it will transition to a status and severity of `ConditionStatusFalse` and `ConditionSeverityError`. Its `Reason` and `Message` will be propagated from the failed `ActionStatus.FailureReason` and `ActionStatus.FailureMessage`.
 
 #### Conditions
 
@@ -485,7 +503,7 @@ type ConditionStatus string
 
 const (
 	// ConditionStatusUnknown is the default status and indicates the condition cannot be
-	// evaluated to either ConditionStatusTrue or ConditionStatusFalse.
+	// evaluated as True or False.
 	ConditionStatusUnknown ConditionStatus = "Unknown"
 
 	// ConditionStatusTrue indicates the condition has been evaluated as true.
