@@ -84,16 +84,6 @@ The CRDs will be developed under a `v1alpha2` API version.
 #### `Hardware`
 
 ```go
-// +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".spec.clusterName",description="Cluster"
-
-// Hardware is a logical representation of a machine that can execute Workflows.
-type Hardware struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	HardwareSpec `json:"spec,omitempty"`
-}
-
 type HardwareSpec struct {
 	// NetworkInterfaces defines the desired DHCP and netboot configuration for a network interface.
 	// +kubebuilder:validation:MinItems=1
@@ -228,9 +218,37 @@ type Nameserver string
 type Timeserver string
 
 // StorageDevice describes a storage device path that will be present in the OSIE.
-// StorageDevices must be valid linux paths.
+// StorageDevices must be valid Linux paths. They should not contain partitions.
+//
+// Good
+//   /dev/sda
+//   /dev/nvme0n1
+//
+// Bad (contains partitions)
+//   /dev/sda1
+//   /dev/nvme0n1p1
+//
+// Bad (invalid Linux path)
+//   \dev\sda
+//
 // +kubebuilder:validation:Pattern="^(/[^/ ]*)+/?$"
 type StorageDevice string
+
+// +kubebuilder:printcolumn:name="BMC",type="string",JSONPath=".spec.bmcRef",description="Baseboard management computer attached to the Hardware"
+
+// Hardware is a logical representation of a machine that can execute Workflows.
+type Hardware struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	HardwareSpec `json:"spec,omitempty"`
+}
+
+type HardwareList struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Items             []Hardware `json:"items"`
+}
 ```
 
 #### `OSIE`
@@ -238,6 +256,14 @@ type StorageDevice string
 `OSIE` is a new CRD. It enables re-use of OSIE URLs across `Hardware` instances.
 
 ```go
+type OSIESpec struct {
+	// KernelURL is a URL to a kernel image.
+	KernelURL string `json:"kernelUrl,omitempty"`
+
+	// InitrdURL is a URL to an initrd image.
+	InitrdURL string `json:"initrdUrl,omitempty"`
+}
+
 // OSIE describes an Operating System Installation Environment. It is used by Tinkerbell
 // to provision machines and should launch the Tink Worker component.
 type OSIE struct {
@@ -247,29 +273,16 @@ type OSIE struct {
 	Spec OSIESpec `json:"spec,omitempty"`
 }
 
-type OSIESpec struct {
-	// KernelURL is a URL to a kernel image.
-	KernelURL string `json:"kernelUrl,omitempty"`
-
-	// InitrdURL is a URL to an initrd image.
-	InitrdURL string `json:"initrdUrl,omitempty"`
+type OSIEList struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Items             []OSIESpec `json:"items"`
 }
 ```
 
 #### `Template`
 
 ```go
-// Template defines a set of actions to be run on a target machine. The template is rendered
-// prior to execution where it is exposed to Hardware and user defined data. Most fields within the
-// TemplateSpec may contain templates values excluding .TemplateSpec.Actions[].Name.
-// See https://pkg.go.dev/text/template for more details.
-type Template struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec TemplateSpec `json:"spec,omitempty"`
-}
-
 type TemplateSpec struct {
 	// Actions defines the set of actions to be run on a target machine. Actions are run sequentially
 	// in the order they are specified. At least 1 action must be specified. Names of actions
@@ -290,11 +303,11 @@ type TemplateSpec struct {
 
 // Action defines an individual action to be run on a target machine.
 type Action struct {
-	// Name is a unique name for the action. It cannot be a templated value.
-	Name string `json:"name,omitempty"`
+	// Name is a name for the action.
+	Name string `json:"name"`
 
 	// Image is an OCI image.
-	Image string `json:"image,omitempty"`
+	Image string `json:"image"`
 
 	// Cmd defines the command to use when launching the image.
 	// +optional
@@ -334,6 +347,22 @@ type Action struct {
 // See https://docs.docker.com/storage/volumes/ for additional details
 type Volume string
 
+// Template defines a set of actions to be run on a target machine. The template is rendered
+// prior to execution where it is exposed to Hardware and user defined data. Most fields within the
+// TemplateSpec may contain templates values excluding .TemplateSpec.Actions[].Name.
+// See https://pkg.go.dev/text/template for more details.
+type Template struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec TemplateSpec `json:"spec,omitempty"`
+}
+
+type TemplateList struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Items             []Template `json:"items"`
+}
 ```
 
 #### `Workflow`
@@ -362,14 +391,14 @@ type WorkflowSpec struct {
 
 type WorkflowStatus struct {
 	// Actions is a list of action states.
-	Actions []ActionStatus `json:"actions,omitempty"`
+	Actions []ActionStatus `json:"actions"`
 
 	// StartedAt is the time the first action was requested. Nil indicates the Workflow has not
 	// started.
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
-	// LastUpdated is the observed time when State transitioned last.
-	LastUpdated *metav1.Time `json:"lastUpdated,omitempty"`
+	// LastTransition is the observed time when State transitioned last.
+	LastTransition *metav1.Time `json:"lastTransitioned,omitempty"`
 
 	// State describes the current state of the workflow. For the workflow to enter the 
 	// WorkflowStateSucceeded state all actions must be in ActionStateSucceeded. The Workflow will
@@ -377,7 +406,7 @@ type WorkflowStatus struct {
 	State WorkflowState `json:"state,omitempty"`
 
 	// Conditions details a set of observations about the Workflow.
-	Conditions Conditions
+	Conditions Conditions `json:"conditions"`
 }
 
 // ActionStatus describes status information about an action.
@@ -385,11 +414,14 @@ type ActionStatus struct {
 	// Rendered is the rendered action.
 	Rendered Action `json:"rendered,omitempty"`
 
+	// ID uniquely identifies the action status.
+	ID string `json:"id"`
+
 	// StartedAt is the time the action was requested. Nil indicates the Action has not started.
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
-	// LastUpdated is the observed time when State transitioned last.
-	LastUpdated *metav1.Time `json:"lastUpdated,omitempty"`
+	// LastTransition is the observed time when State transitioned last.
+	LastTransition *metav1.Time `json:"lastTransitioned,omitempty"`
 
 	// State describes the current state of the action.
 	State ActionState `json:"state,omitempty"`
@@ -440,6 +472,9 @@ const (
 )
 
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state",description="State of the workflow such as Pending,Running etc"
+// +kubebuilder:printcolumn:name="Hardware",type="string",JSONPath=".spec.hardwareRef",description="Hardware object that runs the workflow"
+// +kubebuilder:printcolumn:name="Template",type="string",JSONPath=".spec.templateRef",description="Template to run on the associated Hardware"
 
 // Workflow describes a set of actions to be run on a specific Hardware. Workflows execute
 // once and should be considered ephemeral.
@@ -454,7 +489,7 @@ type Workflow struct {
 type WorkflowList struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Items []Workflow `json:"items,omitempty"`
+	Items             []Workflow `json:"items,omitempty"`
 }
 ```
 
@@ -527,8 +562,8 @@ type Condition struct {
    // +optional
    Severity ConditionSeverity `json:"severity,omitempty"`
 
-   // LastTransitionTime is the last time the condition transitioned from one status to another.
-   LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+   // LastTransition is the last time the condition transitioned from one status to another.
+   LastTransition *metav1.Time `json:"lastTransitionTime"`
 
    // Reason is a short CamelCase description for the conditions last transition.
    // +optional
