@@ -73,6 +73,7 @@ Users resort to Q&A in the Tinkerbell Slack to determine what fields are require
 - To change the existing relationship between Tink and Rufio.
 - To introduce additional object status data typically found on the `.Status` field.
 - To support new technologies such as IPv6.
+- To define new Kubernetes events.
 
 ## Proposal
 
@@ -83,6 +84,8 @@ The CRDs will be developed under a `v1alpha2` API version.
 #### `Hardware`
 
 ```go
+// +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".spec.clusterName",description="Cluster"
+
 // Hardware is a logical representation of a machine that can execute Workflows.
 type Hardware struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -212,8 +215,8 @@ type Instance struct {
 // NetworkInterfaces maps a MAC address to a NetworkInterface.
 type NetworkInterfaces map[MAC]NetworkInterface
 
-// MAC is a Media Access Control address.
-// +kubebuilder:validation:Pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"
+// MAC is a Media Access Control address. MACs must use lower case letters.
+// +kubebuilder:validation:Pattern="^([0-9a-f]{2}:){5}([0-9a-f]{2})$"
 type MAC string
 
 // Nameserver is an IP or hostname.
@@ -375,6 +378,9 @@ type WorkflowStatus struct {
 	// started.
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
+	// LastUpdated is the observed time when State transitioned last.
+	LastUpdated *metav1.Time `json:"lastUpdated,omitempty"`
+
 	// State describes the current state of the workflow. For the workflow to enter the 
 	// WorkflowStateSucceeded state all actions must be in ActionStateSucceeded. The Workflow will
 	// enter a WorkflowStateFailed if 1 or more Actions fails.
@@ -390,19 +396,21 @@ type ActionStatus struct {
 	Rendered Action `json:"rendered,omitempty"`
 
 	// StartedAt is the time the action was requested. Nil indicates the Action has not started.
-	StartedAt metav1.Time `json:"startedAt,omitempty"`
+	StartedAt *metav1.Time `json:"startedAt,omitempty"`
+
+	// LastUpdated is the observed time when State transitioned last.
+	LastUpdated *metav1.Time `json:"lastUpdated,omitempty"`
 
 	// State describes the current state of the action.
 	State ActionState `json:"state,omitempty"`
 
-	// Reason is a short CamelCase word or phrase describing why the Action entered
-	// ActionStateFailed. It is not relevant when the State field is not ActionStateFailed. 
-	Reason string `json:"reason,omitempty"`
+	// FailureReason is a short CamelCase word or phrase describing why the Action entered
+	// ActionStateFailed.
+	FailureReason string `json:"failureReason,omitempty"`
 
-	// Message is a free-form user friendly message describing why the Action entered the
-	// ActionStateFailed state. Typically, this is an elaboration on the Reason. It is not
-	// relevant when the State field is not ActionStateFailed.
-	Message string `json:"message,omitempty"`
+	// FailureMessage is a free-form user friendly message describing why the Action entered the
+	// ActionStateFailed state. Typically, this is an elaboration on the Reason.
+	FailureMessage string `json:"failureMessage,omitempty"`
 }
 
 // State describes the point in time state of a Workflow.
@@ -410,17 +418,17 @@ type WorkflowState string
 
 const (
 	// WorkflowStatePending indicates the workflow is in a pending state.
-	WorkflowStatePending   WorkflowState = "Pending"
+	WorkflowStatePending WorkflowState = "Pending"
 
 	// WorkflowStateRunning indicates the first Action has been requested and the Workflow is in
 	// progress.
-	WorkflowStateRunning   WorkflowState = "Running"
+	WorkflowStateRunning WorkflowState = "Running"
 
 	// WorkflowStateSucceeded indicates all Workflow actions have successfully completed.
 	WorkflowStateSucceeded WorkflowState = "Succeeded"
 
 	// WorkflowStateFailed indicates an Action entered a failure state.
-	WorkflowStateFailed    WorkflowState = "Failed"
+	WorkflowStateFailed WorkflowState = "Failed"
 )
 
 // ActionState describes a point in time state of an Action.
@@ -428,30 +436,30 @@ type ActionState string
 
 const (
 	// ActionStatePending indicates an Action is awaiting execution.
-	ActionStatePending      ActionState = "Pending"
+	ActionStatePending ActionState = "Pending"
 
 	// ActionStateRunning indicates an Action has begun execution.
-	ActionStateRunning      ActionState = "Running"
+	ActionStateRunning ActionState = "Running"
 
 	// ActionStateSucceeded indicates an Action completed execution successfully.
-	ActionStateSucceeded    ActionState = "Succeeded"
+	ActionStateSucceeded ActionState = "Succeeded"
 
 	// ActionStatFailed indicates an Action failed to execute. Users may inspect the associated
 	// Workflow resource to gain deeper insights into why the action failed.
-	ActionStateFailed       ActionState = "Failed"
+	ActionStateFailed ActionState = "Failed"
 )
 ```
 
-A `Started` condition will be used to indicate the workflow has started and is observed based on the presence of `Workflow.WorkflowStatus.StartedAt`. It's severity will be `ConditionSeverityInfo` and its default Status will be `ConditionStatusFalse`.
+A `Started` condition will be used to indicate the workflow has started and is observed based on the presence of `Workflow.WorkflowStatus.StartedAt`. It's severity will be `ConditionSeverityInfo` and its default status will be `ConditionStatusFalse`.
 
-A `Succeeded` condition will be used to indicate the workflow succeeded indicated by a status of `ConditionStatusTrue`. When an action fails, `Succeeded` will become `ConditionStatusFalse` with severity `ConditionSeverityError` and the `Reason` and `Message` will be propagated from the failed `ActionStatus`.
+A `Succeeded` condition will be used to indicate the workflow succeeded. It will default to `ConditionStatusUnknown`. It will become `ConditionStatusTrue` with `ConditionSeverityInfo` when `WorkflowStatus.State == WorkflowStateSucceeded`. When an action fails, it will become `ConditionStatusFalse` with severity `ConditionSeverityError`. Its `Reason` and `Message` will be propagated from the failed `ActionStatus.FailureReason` and `ActionStatus.FailureMessage`.
 
 #### Conditions
 
 The conditions data structure will only be available on the `Workflow` CRD but is designed to be applicable to other resources. It provides the foundational components for extensible observations about any resource that it resides on.
 
 ```go
-// ConditionType 
+// ConditionType identifies the type of condition.
 type ConditionType string
 
 // ConditionSeverity expresses the severity of a Condition Type failing.
@@ -461,8 +469,8 @@ const (
   // ConditionSeverityError indicates the condition should be treated as an error.
   ConditionSeverityError ConditionSeverity = "Error"
 
-  // ConditionSeverityWarning indicates the condition shouldbe investigated but the system may
-  // continue to work.
+  // ConditionSeverityWarning indicates the condition should be investigated but that everything
+  // may continue to function.
   ConditionSeverityWarning ConditionSeverity = "Warning"
 
   // ConditionSeverityInfo indicates the condition is informational only.
@@ -504,7 +512,7 @@ type Condition struct {
    // LastTransitionTime is the last time the condition transitioned from one status to another.
    LastTransitionTime metav1.Time `json:"lastTransitionTime"`
 
-   // Reason for the conditions last transition.
+   // Reason is a short CamelCase description for the conditions last transition.
    // +optional
    Reason string `json:"reason,omitempty"`
 
