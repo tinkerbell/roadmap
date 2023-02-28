@@ -13,6 +13,9 @@
       - [`OSIE`](#osie)
       - [`Template`](#template)
       - [`Workflow`](#workflow)
+        - [Workflow `Started` condition](#workflow-started-condition)
+        - [Workflow `Succeeded` condition](#workflow-succeeded-condition)
+      - [Conditions](#conditions)
     - [Workflow state machine](#workflow-state-machine)
     - [Action state machine](#action-state-machine)
     - [Resource validation](#resource-validation)
@@ -21,8 +24,6 @@
   - [Migrating from v1alpha1 to v1alpha2](#migrating-from-v1alpha1-to-v1alpha2)
   - [Rationale](#rationale)
     - [Comparison with existing resources](#comparison-with-existing-resources)
-    - [Use of explicit `State`, `Reason` and `Message` fields vs conditions](#use-of-explicit-state-reason-and-message-fields-vs-conditions)
-    - [`ActionState` and `WorkflowState`](#actionstate-and-workflowstate)
   - [Implementation Plan](#implementation-plan)
   - [Future Work](#future-work)
 
