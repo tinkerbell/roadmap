@@ -96,7 +96,12 @@ type HardwareSpec struct {
 	IPXE IPXE `json:"ipxe,omitempty"`
 
 	// OSIE describes the Operating System Installation Environment to be netbooted.
-	OSIE OSIE `json:"osie,omitempty"`
+	OSIE corev1.LocalObjectReference `json:"osie,omitempty"`
+
+	// KernelParams passed to the kernel when launching the OSIE. Parameters are joined with a
+	// space.
+	// +optional
+	KernelParams []string `json:"kernelParams,omitempty"`
 
 	// Instance describes instance specific data that is generally unused by Tinkerbell core.
 	// +optional
@@ -173,10 +178,6 @@ type OSIE struct {
 	// OSIERef is a reference to an OSIE object.
 	OSIERef corev1.LocalObjectReference `json:"osieRef,omitempty"`
 
-	// KernelParams passed to the kernel when launching the OSIE. Parameters are joined with a
-	// space.
-	// +optional
-	KernelParams []string `json:"kernelParams,omitempty"`
 }
 
 // IPXE describes overrides for IPXE scripts. At least 1 option must be specified.
