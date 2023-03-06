@@ -109,7 +109,7 @@ type HardwareSpec struct {
 	// BMCRef references a Rufio Machine object. It exists in the current API and will not be changed
 	// with this proposal.
 	// +optional.
-	BMCRef LocalObjectReference `json:"bmcRef,omitempty"`
+	BMCRef corev1.LocalObjectReference `json:"bmcRef,omitempty"`
 }
 
 // NetworkInterface is the desired configuration for a particular network interface.
@@ -169,9 +169,9 @@ type DHCP struct {
 
 // OSIE describes an OSIE to be used with a Hardware. The environment data
 // is dependent on the OSIE being used and should be updated with the OSIE reference object.
-type Netboot struct {
+type OSIE struct {
 	// OSIERef is a reference to an OSIE object.
-	OSIERef LocalObjectReference `json:"osieRef,omitempty"`
+	OSIERef corev1.LocalObjectReference `json:"osieRef,omitempty"`
 
 	// KernelParams passed to the kernel when launching the OSIE. Parameters are joined with a
 	// space.
@@ -372,11 +372,11 @@ type TemplateList struct {
 type WorkflowSpec struct {
 	// HardwareRef is a reference to a Hardware resource this workflow will execute on.
 	// If no namespace is specified the Workflow's namespace is assumed.
-	HardwareRef LocalObjectReference `json:"hardwareRef,omitempty"`
+	HardwareRef corev1.LocalObjectReference `json:"hardwareRef,omitempty"`
 
 	// TemplateRef is a reference to a Template resource used to render workflow actions.
 	// If no namespace is specified the Workflow's namespace is assumed.
-	TemplateRef LocalObjectReference `json:"templateRef,omitempty"`
+	TemplateRef corev1.LocalObjectReference `json:"templateRef,omitempty"`
 
 	// TemplateData is user defined data that is injected during template rendering. The data
 	// structure should be marshalable.
@@ -504,7 +504,7 @@ When `Workflow.WorkflowStatus.StartedAt` is a non-nil value it transitions to `T
 
 A `Succeeded` condition will be used to indicate the workflow succeeded.
 
-When `WorkflowStatus.State` transitions to `WorkflowStateSucceeded`, it will transition to a status and severity of `ConditionStatusTrue` and `ConditionSeverityInfo`. 
+When `WorkflowStatus.State` transitions to `WorkflowStateSucceeded`, it will transition to a status and severity of `ConditionStatusTrue` and `ConditionSeverityInfo`.
 
 When `WorkflowStatus.State` transitions to `WorkflowStateFailed`, it will transition to a status and severity of `ConditionStatusFalse` and `ConditionSeverityError`. Its `Reason` and `Message` will be propagated from the failed `ActionStatus.FailureReason` and `ActionStatus.FailureMessage`.
 
