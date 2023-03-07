@@ -165,19 +165,12 @@ type DHCP struct {
 	// +optional
 	Timeservers []Timeserver `json:"timeservers,omitempty"`
 
-	// LeaseTime to serve.
-	// 24h default.
+	// LeaseTimeSeconds to serve. 24h default. Maximum equates to max uint32 as defined by RFC 2132
+	// § 9.2 (https://www.rfc-editor.org/rfc/rfc2132.html#section-9.2).
 	// +kubebuilder:default=86400
 	// +kubebuilder:validation:Minimum=0
-	LeaseTime int32 `json:"leaseTime"`
-}
-
-// OSIE describes an OSIE to be used with a Hardware. The environment data
-// is dependent on the OSIE being used and should be updated with the OSIE reference object.
-type OSIE struct {
-	// OSIERef is a reference to an OSIE object.
-	OSIERef corev1.LocalObjectReference `json:"osieRef,omitempty"`
-
+	// +kubebuilder:validation:Maximum=4294967295
+	LeaseTimeSeconds int64 `json:"leaseTimeSeconds"`
 }
 
 // IPXE describes overrides for IPXE scripts. At least 1 option must be specified.
@@ -379,16 +372,18 @@ type WorkflowSpec struct {
 	// If no namespace is specified the Workflow's namespace is assumed.
 	TemplateRef corev1.LocalObjectReference `json:"templateRef,omitempty"`
 
-	// TemplateData is user defined data that is injected during template rendering. The data
-	// structure should be marshalable.
+	// TemplateParams are a list of key-value pairs that are injected into templates at render
+	// time. TemplateParams are exposed to templates using a top level .Params key.
+	//
+	// For example, if TemplateParams = {"foo": "bar"}, the foo key can be accessed via .Params.foo.
 	// +optional
-	TemplateData map[string]any `json:"templateData,omitempty"`
+	TemplateParams map[string]string `json:"templateParams,omitempty"`
 
-	// Timeout defines the time the workflow has to complete. The timer begins when the first action
-	// is requested. When set to 0, no timeout is applied.
+	// TimeoutSeconds defines the time the workflow has to complete. The timer begins when the first
+	// action is requested. When set to 0, no timeout is applied.
 	// +kubebuilder:default=0
 	// +kubebuilder:validation:Minimum=0
-	Timeout time.Duration `json:"timeout,omitempty"`
+	TimeoutSeconds int64 `json:"timeout,omitempty"`
 }
 
 type WorkflowStatus struct {
@@ -419,7 +414,8 @@ type ActionStatus struct {
 	// ID uniquely identifies the action status.
 	ID string `json:"id"`
 
-	// StartedAt is the time the action was requested. Nil indicates the Action has not started.
+	// StartedAt is the time the action was started as reported by the client. Nil indicates the
+	// Action has not started.
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 
 	// LastTransition is the observed time when State transitioned last.
@@ -517,24 +513,6 @@ The conditions data structure will only be available on the `Workflow` CRD but i
 // ConditionType identifies the type of condition.
 type ConditionType string
 
-// ConditionSeverity expresses the severity of a Condition Type failing.
-type ConditionSeverity string
-
-const (
-  // ConditionSeverityError indicates the condition should be treated as an error.
-  ConditionSeverityError ConditionSeverity = "Error"
-
-  // ConditionSeverityWarning indicates the condition should be investigated but that everything
-  // may continue to function.
-  ConditionSeverityWarning ConditionSeverity = "Warning"
-
-  // ConditionSeverityInfo indicates the condition is informational only.
-  ConditionSeverityInfo ConditionSeverity = "Info"
-
-  // ConditionSeverityNone indicates the condition has no severity.
-  ConditionSeverityNone ConditionSeverity = ""
-)
-
 // ConditionStatus expresses the current state of the condition.
 type ConditionStatus string
 
@@ -558,14 +536,6 @@ type Condition struct {
 
    // Status of the condition.
    Status ConditionStatus `json:"status"`
-
-   // Severity with which to treat failures of this type of condition.
-   // +kubebuilder:default="Error"
-   // +optional
-   Severity ConditionSeverity `json:"severity,omitempty"`
-
-   // LastTransition is the last time the condition transitioned from one status to another.
-   LastTransition *metav1.Time `json:"lastTransitionTime"`
 
    // Reason is a short CamelCase description for the conditions last transition.
    // +optional
@@ -597,6 +567,8 @@ Each CRD will leverage [CEL](https://kubernetes.io/blog/2022/09/23/crd-validatio
 Templates will have access to a subset of `Hardware` data when they are rendered. Injecting `Hardware` data was outlined in a [previous proposal](https://github.com/tinkerbell/proposals/tree/e24b19a628c6b1ecaafd566667155ca5d6fd6f70/proposals/0028). The existing implementation only injects disk that will, based on this proposal, be sourced from the `.Hardware.StorageDevices` list. This will continue to be available for new templates.
 
 All existing, custom template functions detailed in [`template_funcs.go`](https://github.com/tinkerbell/tink/blob/main/internal/workflow/template_funcs.go) will continue to be available during template rendering.
+
+Additionally, data specified on the new `Workflow.Spec.TemplateParams` field will be available from a top level `.Params` key. This compliments hardware data that is injected via the `.Hardware` key.
 
 ### Hegel API Changes
 
