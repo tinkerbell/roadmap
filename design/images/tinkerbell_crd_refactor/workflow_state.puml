@@ -1,0 +1,14 @@
+@startuml workflow_state_machine
+
+[*] --> WorkflowStatePending : Workflow reconciled
+WorkflowStatePending --> WorkflowStateRunning : First action requested
+WorkflowStateRunning --> WorkflowStateSucceeded
+WorkflowStateRunning --> WorkflowStateFailed
+WorkflowStateSucceeded --> [*]
+WorkflowStateFailed --> [*]
+
+WorkflowStatePending : Workflow waiting to start
+WorkflowStateSucceeded : All actions completed\nsuccessfully
+WorkflowStateFailed : An action failed
+
+@enduml
