@@ -25,4 +25,4 @@ Actions can communicate a failure message by writing to `/dev/message`.
 
 When an action exits with a non-zero exit code, Tink Worker will arrange to read the reason and message provided by the action image and transmit them, with the action result, to Tink Server. Tink Server will update the action state, reason and message. Providing the reason and message on the action status will ensure the controller populates the `Succeeded` condition as detailed in the Tink CRD Refactor proposal.
 
-![Reason propagation]()
+![Reason propagation](https://raw.githubusercontent.com/tinkerbell/roadmap/7e4e769305edf5c5679a406ebf0564eb754fe57a/design/images/tink_worker_failure_reasons/reason_propagation.png)
