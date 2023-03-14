@@ -19,9 +19,9 @@ This proposal lays out a contract for action containers to communicate why it ex
 
 ## Proposal
 
-Actions can communicate a failure reason by writing to `/dev/reason`. The reason must follow the formatting expectations defined by the Tink API (it must be a CamelCase word or phrase). If the reason does not follow the convention we will report `InvalidActionReason` in-place of the reported reason.
+Actions communicate a `Reason` by writing it to `/tinkerbell/failure-reason`. The reason must follow the same formatting expectations as defined in the CRD refactor proposal: most importantly, it must not contain spaces or new lines. If the reason does not follow the convention we will report `InvalidActionReason` in-place of the reported reason.
 
-Actions can communicate a failure message by writing to `/dev/message`.
+Actions communicate a failure message by writing to `/tinkerbell/failure-message`. It must not contain new lines.
 
 When an action exits with a non-zero exit code, Tink Worker will arrange to read the reason and message provided by the action image and transmit them, with the action result, to Tink Server. Tink Server will update the action state, reason and message. Providing the reason and message on the action status will ensure the controller populates the `Succeeded` condition as detailed in the Tink CRD Refactor proposal.
 
