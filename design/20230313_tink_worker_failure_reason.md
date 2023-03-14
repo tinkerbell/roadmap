@@ -27,6 +27,6 @@ When an action exits with a non-zero exit code, Tink Worker will arrange to read
 
 ![Reason propagation](https://raw.githubusercontent.com/tinkerbell/roadmap/7e4e769305edf5c5679a406ebf0564eb754fe57a/design/images/tink_worker_failure_reasons/reason_propagation.png)
 
-The files will be mounted with `0666` permissions granting read write access to everyone. This ensures images launched with a different UID will still be able to write a reason and message.
+The reason and message files will be mounted with `0666` permissions granting read write access to everyone. This ensures images launched with a different UID will still be able to write a reason and message.
 
 The implementation behind the reason and message files will be transparent to the action maintainer. For example, the file may be backed by unix domain sockets or a host text file.
