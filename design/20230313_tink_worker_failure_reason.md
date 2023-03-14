@@ -19,7 +19,7 @@ This proposal lays out a contract for action containers to communicate why it ex
 
 ## Proposal
 
-Actions can communicate a failure reason by writing to `/dev/reason`.
+Actions can communicate a failure reason by writing to `/dev/reason`. The reason must follow the formatting expectations defined by the Tink API (it must be a CamelCase word or phrase). If the reason does not follow the convention we will report `InvalidActionReason` in-place of the reported reason.
 
 Actions can communicate a failure message by writing to `/dev/message`.
 
