@@ -1,4 +1,4 @@
-# Tink Worker Failure Reasons
+# Action Failure Reason Communication
 
 ## Context
 
