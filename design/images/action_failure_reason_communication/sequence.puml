@@ -1,0 +1,24 @@
+@startuml reason_propagation
+
+participant Action as action
+participant "Tink Worker" as worker
+participant "Tink Server" as server
+entity "Workflow" as workflow
+
+
+worker -> server ++ : Request actions
+activate worker
+server -> workflow : Get actions
+server <-- workflow
+worker <-- server -- : Actions
+loop for every action
+worker -> action ++ : Execute
+action -> action : Write to /dev/reason\nWrite to /dev/message
+worker <- action -- : Exit non-zero
+worker -> action : Extract reason and message
+worker <-- action --
+worker -> server -- : Report status, reason\nand message
+server -> workflow : Update action
+end
+
+@enduml
