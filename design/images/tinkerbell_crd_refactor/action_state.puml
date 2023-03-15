@@ -1,0 +1,10 @@
+@startuml action_state_machine
+
+[*] --> ActionStatePending
+ActionStatePending --> ActionStateRunning
+ActionStateRunning --> ActionStateSucceeded
+ActionStateRunning --> ActionStateFailed
+ActionStateSucceeded --> [*]
+ActionStateFailed --> [*]
+
+@enduml
