@@ -1,0 +1,22 @@
+@startuml state
+
+hide empty description
+
+[*] --> Pending : Prepare Workflow
+
+Pending -> Scheduled : Dispatch Workflow
+Scheduled -> Pending : Workflow rejected
+Pending ---> Canceled : Delete Workflow
+Scheduled --> Running : First action starts
+Scheduled -> Cancelling : Delete Workflow/\nUser sets Cancelling
+Scheduled --> Failed : Workflow doesn't\nstart
+Running --> Succeeded : Final action\ncompletes
+Running --> Failed : Runtime failure
+Running -> Cancelling : Delete Workflow/\nUser sets Cancelling
+Cancelling --> Canceled : Workflow reports\nfinished
+
+Succeeded --> [*]
+Failed --> [*]
+Canceled --> [*]
+
+@enduml
