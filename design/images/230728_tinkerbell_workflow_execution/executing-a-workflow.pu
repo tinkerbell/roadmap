@@ -1,0 +1,27 @@
+@startuml executing-a-workflow
+
+actor "Operator" as operator
+participant "Tink Agent" as agent
+participant "Tink Server" as server
+entity "Workflow" as workflow
+control "Tink Controller" as controller
+
+operator -> workflow : Create
+controller -> workflow : Prepare
+server <- workflow : Receive Pending\nnotification
+agent <- server : Run Workflow
+activate agent
+loop foreach action
+    agent -// server : Start action Event
+    activate server
+    server -> workflow : Update status
+    deactivate server
+    agent -> agent : Run action
+    agent -// server : Finish action Event
+    activate server
+    server -> workflow : Update status
+    deactivate server
+end
+deactivate agent
+
+@enduml

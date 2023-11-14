@@ -1,0 +1,21 @@
+@startuml cancelling-workflow
+
+
+actor "Operator" as operator
+entity Workflow as workflow
+control "Tink Controller" as controller
+participant "Tink Server" as server
+participant "Tink Agent" as agent
+
+operator -> workflow : Delete
+workflow -// controller : Notified of change
+controller -> workflow : Update Status(Cancelling)
+workflow -// server : Notified of change
+server -> agent : Cancel Workflow
+agent -> agent : Cancel
+agent -> server : Publish Canceled
+server -> workflow : Update Status(Canceled)
+workflow -// controller : Notified of change
+controller -> workflow : Remove finalizer
+
+@enduml
