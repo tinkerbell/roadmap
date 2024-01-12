@@ -45,7 +45,7 @@ The [v1alpha2 API](https://github.com/tinkerbell/roadmap/blob/main/design/202302
 
 Tinkerbell defines 3 core components involved with Workflow execution: Tink Worker, Tink Server and Tink Controller. Tink Worker runs on the target device and executes Workflow actions reporting the result of actions to Tink Server. On startup, Tink Worker connects to Tink Server providing a unique identifier that Tink Server uses to retrieve Workflows. As Tink Server receives the result of executing actions from Tink Worker, it updates the Workflow resource.
 
-Tink Controller is responsible for preparing Workflows resources using Templates. When a user submits Hardware, Workflow and Template resources to the system, Tink Controller renders the Template storing the output on the Workflow so it can be updated as Workflow actions execute. Tink Controller bears no other responsibility.
+Tink Controller is responsible for preparing Workflows using Templates. When a user submits Hardware, Workflow and Template resources to the system, Tink Controller renders the Template storing the output on the Workflow status field. Tink Controller bears no other responsibility.
 
 Tink Worker communicates with Tink Server over gRPC. There are a handful of obsolete RPCs that are unimplemented in Tink Server since the transition to the Kubernetes backend (see Appendix A for existing protobuf).
 
@@ -83,7 +83,7 @@ Tink Server will continue to expose a gRPC API. The protobuf will be simplified 
 
 #### Service protobuf
 
-The Workflow Service exposes 2 APIs, 1 for establishing a command stream and 1 for publishing Workflow execution events. The full protobuf can be found in Appendix A.
+The Workflow Service exposes 2 APIs, 1 for establishing a command stream and 1 for publishing Workflow execution events. The full protobuf can be found in Appendix B.
 
 ```protobuf
 // WorkflowService is responsible for retrieving workflows to be executed by the agent and
