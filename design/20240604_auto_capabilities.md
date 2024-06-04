@@ -33,15 +33,15 @@ The automatic capabilities during this phase are isolated to the Smee service. T
 
 ### Phase 2
 
-This phase consists of 2 modes. Ignore the naming of these modes as they can change if we don't like them. The automatic capabilities during this phase are isolated the Tink Server and Worker. In this phase "unknown" is defined as there is no Hardware object associated with the Tink Worker ID (MAC address).
+This phase consists of 2 modes. Ignore the naming of these modes as they can change if we don't like them. The automatic capabilities during this phase are isolated to the Tink Server and Worker. In this phase "unknown" is defined as there is no Hardware object associated with the Tink Worker ID (MAC address).
 
 #### Discovery Mode
 
-This mode is called discovery. This is when an unknown Tink Worker connects to the Tink Server. Tink Server will create a Hardware object for this Tink Worker ID. The Tink Worker will then be ready to run a Workflow. The Tink Worker will not have a Workflow automatically created. This mode will only run if a Hardware object for the corresponding Tink Worker ID does not exist.
+This is when an unknown Tink Worker connects to the Tink Server. Tink Server will create a Hardware object for this Tink Worker ID. The Tink Worker will then be ready to run a Workflow. The Tink Worker will not have a Workflow object automatically created. This mode will only run if a Hardware object for the corresponding Tink Worker ID does not exist.
 
 #### Enrollment Mode
 
-This mode is enrollment. This is when an unknown Tink Worker connects to the Tink Server. Tink Server will create a Hardware object. Tink Server will also create a Workflow with the newly created Hardware object and using a single predefined Template. The creation of this Workflow and the connected Tink Worker will cause that the Workflow will start running right away. This mode will only run if a Hardware object for the corresponding Tink Worker ID does not exist.
+This is when an unknown Tink Worker connects to the Tink Server. Tink Server will create a Hardware object. Tink Server will also create a Workflow object with the newly created Hardware object and using a single predefined Template. The creation of this Workflow and the connected Tink Worker will cause that the Workflow will start running right away. This mode will only run if Hardware and Workflow objects for the corresponding Tink Worker ID do not exist.
 
 ### Sequence Diagrams
 
